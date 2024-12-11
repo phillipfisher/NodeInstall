@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -27,9 +28,12 @@ namespace ON.SimpleWeb.Controllers
         [HttpGet("check")]
         public async Task<IActionResult> Check()
         {
-            await paymentsService.CheckOneTime();
+            var res = await paymentsService.CheckOneTime();
 
-            return Redirect("/");
+            if (res == null || res.Records.Count == 0)
+                return Redirect("/");
+
+            return Redirect("/content/" + res.Records.OrderByDescending(r => r.CreatedOnUTC).FirstOrDefault()?.InternalID.ToString());
         }
     }
 }

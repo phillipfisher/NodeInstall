@@ -2,11 +2,16 @@
 using ON.Fragments.Content;
 using ON.Fragments.Content.Stats;
 using ON.SimpleWeb.Models.Comment;
+using System.ComponentModel.DataAnnotations;
 
 namespace ON.SimpleWeb.Models.CMS
 {
     public class ViewContentViewModel
     {
+        [Required]
+        [Display(Name = "Amount")]
+        public double OneTimeAmount { get; set; }
+
         public ContentPublicRecord Record { get; set; }
         public ViewCommentsViewModel Comments { get; set; }
         public GetContentStatsResponse Stats { get; set; }

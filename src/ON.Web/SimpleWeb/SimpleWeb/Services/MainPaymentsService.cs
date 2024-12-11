@@ -43,15 +43,16 @@ namespace ON.SimpleWeb.Services
             return reply;
         }
 
-        public async Task<GetNewOneTimeDetailsResponse> GetNewOneTimeDetails(Guid contentId, string domainName)
+        public async Task<GetNewOneTimeDetailsResponse> GetNewOneTimeDetails(Guid contentId, string domainName, double oneTimeAmount)
         {
             if (!IsLoggedIn)
                 return null;
 
             try
             {
+                var cents = (uint)Math.Round(oneTimeAmount * 100.0);
                 var client = new PaymentInterface.PaymentInterfaceClient(nameHelper.PaymentServiceChannel);
-                var reply = await client.GetNewOneTimeDetailsAsync(new() { InternalId = contentId.ToString(), DomainName = domainName }, GetMetadata());
+                var reply = await client.GetNewOneTimeDetailsAsync(new() { InternalId = contentId.ToString(), DomainName = domainName, DifferentPresetPriceCents = cents }, GetMetadata());
                 return reply;
             }
             catch

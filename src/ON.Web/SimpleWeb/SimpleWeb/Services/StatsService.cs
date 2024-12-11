@@ -30,20 +30,27 @@ namespace ON.SimpleWeb.Services
 
         public async Task<GetContentStatsResponse> GetContentStats(Guid contentId)
         {
-            if (User == null)
-                return null;
-            if (!User.IsLoggedIn)
-                return null;
-
-            var req = new GetContentStatsRequest()
+            try
             {
-                ContentID = contentId.ToString(),
-            };
+                if (User == null)
+                    return null;
+                if (!User.IsLoggedIn)
+                    return null;
 
-            var client = new StatsQueryInterface.StatsQueryInterfaceClient(nameHelper.StatsServiceChannel);
-            var res = await client.GetContentStatsAsync(req, GetMetadata());
+                var req = new GetContentStatsRequest()
+                {
+                    ContentID = contentId.ToString(),
+                };
 
-            return res;
+                var client = new StatsQueryInterface.StatsQueryInterfaceClient(nameHelper.StatsServiceChannel);
+                var res = await client.GetContentStatsAsync(req, GetMetadata());
+
+                return res;
+            }
+            catch
+            {
+                return null;
+            }
         }
 
         public async Task<IEnumerable<ContentListRecord>> GetSaves(ContentService contentService)

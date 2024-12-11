@@ -241,7 +241,7 @@ namespace ON.SimpleWeb.Controllers
 
         [AllowAnonymous]
         [HttpGet("/content/{id}/purchase")]
-        public async Task<IActionResult> Purchase(string id)
+        public async Task<IActionResult> Purchase(string id, double oneTimeAmount = 0)
         {
             Guid contentId;
             if (!Guid.TryParse(id, out contentId))
@@ -250,7 +250,7 @@ namespace ON.SimpleWeb.Controllers
             var domainName = Request.Host.Host == "localhost" ? "http" : "https";
             domainName += "://" + Request.Host.Host;
 
-            var res = await paymentsService.GetNewOneTimeDetails(contentId, domainName);
+            var res = await paymentsService.GetNewOneTimeDetails(contentId, domainName, oneTimeAmount);
             if (res?.Stripe?.PaymentLink != null)
                 return Redirect(res.Stripe.PaymentLink);
 

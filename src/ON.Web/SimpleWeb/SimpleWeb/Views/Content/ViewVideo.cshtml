@@ -56,7 +56,12 @@ else
     {
         if (Model.Record.Data.OneTimeAmountCents > 0)
         {
-            <pre>To see the content please purchase for <a href="/content/@(Model.Record.ContentID)/purchase">@((Model.Record.Data.OneTimeAmountCents / 100.0).ToString("$###,##0.00"))</a> </pre>
+            <form method="get" action="/content/@(Model.Record.ContentID)/purchase">
+                <div class="form-group">
+                    <label>Pay what you will but atleast @((Model.Record.Data.OneTimeAmountCents / 100.0).ToString("$###,##0.00"))</label>
+                </div>
+                <button type="submit" class="btn btn-primary">Buy</button>
+            </form>
         }
         else
         {
