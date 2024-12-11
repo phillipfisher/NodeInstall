@@ -61,7 +61,7 @@ namespace ON.Authorization.Payment.Stripe.Clients
             EnsureProducts();
         }
 
-        public async Task<StripeEnsureOneTimeProductResponse> EnsureOneTimeProduct(StripeEnsureOneTimeProductRequest request)
+        public async Task<Product?> EnsureOneTimeProduct(StripeEnsureOneTimeProductRequest request)
         {
             try
             {
@@ -70,36 +70,30 @@ namespace ON.Authorization.Payment.Stripe.Clients
                     return await CreateOneTimeProduct(request);
 
                 if (product.Active != true)
-                    return await ModifyOneTimeProduct(request);
+                    return await ModifyOneTimeProduct(request, product);
 
                 if (product.Name != request.Name)
-                    return await ModifyOneTimeProduct(request);
+                    return await ModifyOneTimeProduct(request, product);
 
-                return new();
+                return product;
             }
             catch (Exception ex)
             {
-                return new() { Error = ex.Message, };
+                Console.WriteLine(ex.ToString());
             }
+
+            return null;
         }
 
-        public async Task<StripeEnsureOneTimeProductResponse> EnsureOneTimeProductHasDefaultPrice(StripeEnsureOneTimeProductRequest request)
+        public async Task<StripeEnsureOneTimeProductResponse> EnsureOneTimeProductDefaultPrice(Product product, Price price)
         {
             try
             {
-                var product = await GetProduct(request);
-                var price = await GetPrice(request);
-
-                if (product == null)
-                    return new() { Error = "Can't find product for " + request.InternalId, };
-                if (price == null)
-                    return new() { Error = "Can't find price for " + request.InternalId, };
-
                 if (product.DefaultPriceId == price.Id)
                     return new();
 
                 var modifyProductOpts = new ProductUpdateOptions { DefaultPrice = price.Id };
-                var updated = await productService.UpdateAsync(PRODUCT_ONETIME_PREFIX + request.InternalId, modifyProductOpts);
+                var updated = await productService.UpdateAsync(product.Id, modifyProductOpts);
 
                 return new();
             }
@@ -123,7 +117,7 @@ namespace ON.Authorization.Payment.Stripe.Clients
             }
         }
 
-        private async Task<StripeEnsureOneTimeProductResponse> CreateOneTimeProduct(StripeEnsureOneTimeProductRequest request)
+        private async Task<Product?> CreateOneTimeProduct(StripeEnsureOneTimeProductRequest request)
         {
             try
             {
@@ -135,80 +129,67 @@ namespace ON.Authorization.Payment.Stripe.Clients
                     Description = request.Name,
                 };
 
-                var createdProduct = await productService.CreateAsync(newProductOpts);
-                if (createdProduct == null)
-                    return new() { Error = "Failed To Create Product" };
-
-                return new();
+                return await productService.CreateAsync(newProductOpts);
             }
             catch (Exception ex)
             {
-                return new() { Error = ex.Message, };
+                Console.WriteLine(ex.Message);
             }
+
+            return null;
         }
 
-        private async Task<StripeEnsureOneTimeProductResponse> ModifyOneTimeProduct(StripeEnsureOneTimeProductRequest request)
+        private async Task<Product?> ModifyOneTimeProduct(StripeEnsureOneTimeProductRequest request, Product product)
         {
             try
             {
                 var modifyProductOpts = new ProductUpdateOptions { Name = request.Name, Active = true };
 
-                var updated = await productService.UpdateAsync(PRODUCT_ONETIME_PREFIX + request.InternalId, modifyProductOpts);
-                if (updated == null)
-                    return new() { Error = "Unable to update product" };
-
-                return new();
+                return await productService.UpdateAsync(product.Id, modifyProductOpts);
             }
             catch (Exception ex)
             {
-                return new() { Error = ex.Message };
+                Console.WriteLine(ex.Message);
             }
+
+            return null;
         }
 
-        public async Task<StripeEnsureOneTimeProductResponse> EnsureOneTimePrice(StripeEnsureOneTimeProductRequest request)
+        public async Task<Price?> EnsureOneTimePrice(StripeEnsureOneTimeProductRequest request, Product product)
         {
             try
             {
-                var price = await GetPrice(request);
+                var price = await priceService.GetAsync(product.DefaultPriceId);
+
                 if (price == null)
                     return await CreateOneTimePrice(request);
 
                 if (price.Active != true)
-                    return await ModifyOneTimePrice(price, request);
+                    return await CreateOneTimePrice(request);
 
                 if (price.CustomUnitAmount == null)
-                    return await ModifyOneTimePrice(price, request);
+                    return await CreateOneTimePrice(request);
 
                 if (price.CustomUnitAmount.Minimum != request.MinimumPrice)
-                    return await ModifyOneTimePrice(price, request);
+                    return await CreateOneTimePrice(request);
+
+                if (price.CustomUnitAmount.Preset != null)
+                    return await CreateOneTimePrice(request);
 
                 if (price.CustomUnitAmount.Maximum != request.MaximumPrice)
-                    return await ModifyOneTimePrice(price, request);
+                    return await CreateOneTimePrice(request);
 
-                return new();
+                return price;
             }
             catch (Exception ex)
             {
-                return new() { Error = ex.Message, };
+                Console.WriteLine(ex.Message);
             }
+
+            return null;
         }
 
-        private Task<Price?> GetPrice(StripeEnsureOneTimeProductRequest request) => GetPrice(request.InternalId);
-
-        private async Task<Price?> GetPrice(string internalId)
-        {
-            try
-            {
-                var prices = await priceService.SearchAsync(new PriceSearchOptions() { Query = "active:\"true\" AND product: \"" + PRODUCT_ONETIME_PREFIX + internalId + "\"" });
-                return prices.FirstOrDefault();
-            }
-            catch
-            {
-                return null;
-            }
-        }
-
-        private async Task<StripeEnsureOneTimeProductResponse> CreateOneTimePrice(StripeEnsureOneTimeProductRequest request)
+        private async Task<Price?> CreateOneTimePrice(StripeEnsureOneTimeProductRequest request)
         {
             try
             {
@@ -231,16 +212,14 @@ namespace ON.Authorization.Payment.Stripe.Clients
                     }
                 };
 
-                var createdPrice = await priceService.CreateAsync(newPriceOpts);
-                if (createdPrice == null)
-                    return new() { Error = "Failed To Create Price" };
-
-                return new();
+                return await priceService.CreateAsync(newPriceOpts);
             }
             catch (Exception ex)
             {
-                return new() { Error = ex.Message, };
+                Console.WriteLine(ex.Message);
             }
+
+            return null;
         }
 
         private async Task<Price?> CreateOneTimePriceInternal(string internalId, string name, uint minimum, uint preset, uint maximum)
@@ -269,27 +248,6 @@ namespace ON.Authorization.Payment.Stripe.Clients
                 throw new Exception("Failed To Create Price");
 
             return createdPrice;
-        }
-
-        private async Task<StripeEnsureOneTimeProductResponse> ModifyOneTimePrice(Price price, StripeEnsureOneTimeProductRequest request)
-        {
-            try
-            {
-                var priceOpts = new PriceUpdateOptions()
-                {
-                    Active = false,
-                };
-
-                var updatedPrice = await priceService.UpdateAsync(price.Id, priceOpts);
-                if (updatedPrice == null)
-                    return new() { Error = "Failed To Create Price" };
-
-                return await CreateOneTimePrice(request);
-            }
-            catch (Exception ex)
-            {
-                return new() { Error = ex.Message, };
-            }
         }
 
         public async Task<StripeNewDetails?> GetNewDetails(uint level, ONUser userToken, string domainName)
@@ -322,8 +280,8 @@ namespace ON.Authorization.Payment.Stripe.Clients
                     try
                     {
                         var price = await priceService.GetAsync(priceId);
-                        uint minimum = (uint)price.CustomUnitAmount.Minimum;
-                        uint maximum = (uint)price.CustomUnitAmount.Maximum;
+                        uint minimum = (uint)(price.CustomUnitAmount.Minimum ?? 0);
+                        uint maximum = (uint)(price.CustomUnitAmount.Maximum ?? 0);
                         if (differentPresetPriceCents > minimum && differentPresetPriceCents <= maximum)
                         {
                             var newPrice = await CreateOneTimePriceInternal(internalId, "custom", minimum, differentPresetPriceCents, maximum);
@@ -375,6 +333,7 @@ namespace ON.Authorization.Payment.Stripe.Clients
             }
             catch (Exception ex)
             {
+                Console.WriteLine(ex.Message);
                 return null;
             }
         }

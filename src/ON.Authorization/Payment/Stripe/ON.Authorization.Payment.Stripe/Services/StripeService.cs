@@ -443,22 +443,15 @@ namespace ON.Authorization.Payment.Stripe.Services
                 if (userToken == null)
                     return new() { Error = "No user token specified" };
 
-                var res = await client.EnsureOneTimeProduct(request);
-                if (res == null)
+                var product = await client.EnsureOneTimeProduct(request);
+                if (product == null)
                     return new() { Error = "Failed To Get A Response From Stripe Client" };
 
-                if (!string.IsNullOrEmpty(res.Error))
-                    return res;
-
-
-                res = await client.EnsureOneTimePrice(request);
-                if (res == null)
+                var price = await client.EnsureOneTimePrice(request, product);
+                if (price == null)
                     return new() { Error = "Failed To Get A Response From Stripe Client" };
 
-                if (!string.IsNullOrEmpty(res.Error))
-                    return res;
-
-                await client.EnsureOneTimeProductHasDefaultPrice(request);
+                await client.EnsureOneTimeProductDefaultPrice(product, price);
 
                 return new();
             }
