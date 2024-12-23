@@ -20,7 +20,7 @@ namespace ON.Settings
         public readonly Channel PaymentServiceChannel;
         public readonly Channel SettingsServiceChannel;
         public readonly Channel StatsServiceChannel;
-        public readonly Channel UserServiceChannel;
+        public readonly GrpcChannel UserServiceChannel;
 
         public readonly string ServiceToken;
 
@@ -36,7 +36,7 @@ namespace ON.Settings
 
             var uri = configuration.GetServiceUri("authservice", "grpc");
             if (uri != null)
-                UserServiceChannel = new Channel(uri.Host, uri.Port, ChannelCredentials.Insecure);
+                UserServiceChannel = GrpcChannel.ForAddress(uri, options);
 
             uri = configuration.GetServiceUri("chatservice", "grpc");
             if (uri != null)
@@ -66,7 +66,7 @@ namespace ON.Settings
             if (uri != null)
                 StatsServiceChannel = new Channel(uri.Host, uri.Port, ChannelCredentials.Insecure);
 
-            ServiceToken = GetServiceToken();
+            //ServiceToken = GetServiceToken();
         }
 
         private string GetServiceToken()
