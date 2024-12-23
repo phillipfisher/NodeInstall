@@ -8,7 +8,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Logging;
 using ON.Authentication;
 using ON.Content.SimpleCMS.Service.Data;
-using ON.Content.SimpleCMS.Service.Helpers;
 using ON.Fragments.Authorization.Payment;
 using ON.Fragments.Authorization.Payment.Stripe;
 using ON.Fragments.Content;
